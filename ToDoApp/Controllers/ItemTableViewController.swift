@@ -239,21 +239,28 @@ class ItemTableViewController: UITableViewController, SwipeTableViewCellDelegate
         tableView.reloadData() //Bu satır, tabloyu güncellemek için reloadData() metodunu çağırır. Bu, veritabanına yeni bir öğe eklenip eklendiğini görsel olarak tabloya yansıtmak için kullanılır. Eğer bu satır olmasaydı, kullanıcı yeni eklenen öğeyi göremeyebilirdi.
     }
     
-    func loadItems() { //Bu fonksiyon, veritabanından öğeleri yükleyip bir diziye sıralayarak ve ardından tabloyu güncelleyerek öğeleri gösterir.
-        if let selectedCategory = selectedCategory { //Bu kontrol yapısı, eğer bir "selectedCategory" (seçili kategori) varsa, o kategoriye ait öğeleri yükler. Eğer seçili kategori yoksa, tüm "Item" öğelerini yükler.
-            toDoItems = selectedCategory.items.sorted(by: [ //Seçili kategoriye ait öğeler, "done" (tamamlanma durumu) özelliğine göre artan (ascending: true) sırayla ve "dateCreated" (oluşturulma tarihi) özelliğine göre azalan (ascending: false) sırayla sıralanır. Bu sıralama, tamamlanan öğelerin en altta, en yeni öğelerin en üstte görünmesini sağlar.
-    
-                SortDescriptor(keyPath: "done", ascending: true),
-                SortDescriptor(keyPath: "dateCreated", ascending: false)
-            ])
-        } else { //Eğer bir kategori seçilmemişse, tüm "Item" öğeleri yüklenir ve aynı şekilde sıralama yapılır.
+    func loadItems() {
+        if let selectedCategory = selectedCategory {
+            if let searchText = searchBar?.text, !searchText.isEmpty {
+                // Arama çubuğunda yazılan metni içeren ve seçili kategoriye ait öğeleri yükle
+                toDoItems = selectedCategory.items.filter("title CONTAINS[cd] %@", searchText)
+            } else {
+                // Sadece seçili kategoriye ait öğeleri yükle
+                toDoItems = selectedCategory.items.sorted(by: [
+                    SortDescriptor(keyPath: "done", ascending: true),
+                    SortDescriptor(keyPath: "dateCreated", ascending: false)
+                ])
+            }
+        } else {
+            // Kategori seçilmemişse, tüm öğeleri yükle
             toDoItems = realm.objects(Item.self).sorted(by: [
                 SortDescriptor(keyPath: "done", ascending: true),
                 SortDescriptor(keyPath: "dateCreated", ascending: false)
             ])
         }
-        tableView.reloadData() //Bu satır, tabloyu güncellemek için reloadData() metodunu çağırır. Bu işlem, yüklenen ve sıralanan öğeleri tabloya yansıtmak için kullanılır. Eğer bu satır olmasaydı, kullanıcı güncellenmiş öğeleri göremezdi.
+        tableView.reloadData()
     }
+    
     
     func updateModel(at indexPath: IndexPath) { //Bu fonksiyon, belirli bir indexPath'teki öğeyi silmek için kullanılır.
         
@@ -266,34 +273,38 @@ class ItemTableViewController: UITableViewController, SwipeTableViewCellDelegate
                 print("Error deleting item, \(error)")
                 
             }
-        } //Bu fonksiyon, belirli bir indexPath'teki öğeyi silerek, bu silme işlemini veritabanına yansıtarak ve ardından tabloyu güncelleyerek kullanıcıya gösterir.
+        }
     }
 }
 
 extension ItemTableViewController: UISearchBarDelegate {
     
-    // Diğer searchBarDelegate fonksiyonları...
-    
-    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) { //Bu fonksiyon, bir UISearchBar nesnesinin metin değişikliklerini dinler ve bu değişikliklere göre öğeleri filtreleyerek tabloyu günceller.
-        if searchText.isEmpty { //Bu kontrol yapısı, eğer arama çubuğu boşsa (yani hiçbir şey yazılmamışsa), tüm öğelerin gösterilmesini sağlar. Eğer arama çubuğuna bir şey yazılmışsa, bu yazılan metni içeren öğeleri filtrelemek üzere bir sorgu yapılır.
-            
-            // Eğer arama çubuğu boşsa, tüm öğeleri göster
-            toDoItems = realm.objects(Item.self).sorted(by: [ //Eğer arama çubuğu boşsa, tüm öğeler (realm.objects(Item.self)) alınır ve "done" (tamamlanma durumu) özelliğine göre artan (ascending: true) sırayla ve "dateCreated" (oluşturulma tarihi) özelliğine göre azalan (ascending: false) sırayla sıralanır.
-                SortDescriptor(keyPath: "done", ascending: true),
-                SortDescriptor(keyPath: "dateCreated", ascending: false)
-            ])
-        } else {
-            // Arama çubuğunda yazılan metni içeren öğeleri filtrele
-            toDoItems = realm.objects(Item.self) //Eğer arama çubuğuna bir şey yazılmışsa, filter fonksiyonu kullanılarak "title" özelliği içinde yazılan metni içeren öğeler filtrelenir. Burada [cd] seçeneği, büyük/küçük harf duyarlı olmayan bir arama yapılmasını sağlar. Sonrasında yine sıralama yapılır.
-                .filter("title CONTAINS[cd] %@", searchText)
-                .sorted(by: [
+    func filterItemsForSearchText(_ searchText: String) {
+        if let selectedCategory = selectedCategory {
+            if searchText.isEmpty {
+                // Arama çubuğu boşsa, sadece seçili kategoriye ait öğeleri yükle
+                toDoItems = selectedCategory.items.sorted(by: [
                     SortDescriptor(keyPath: "done", ascending: true),
                     SortDescriptor(keyPath: "dateCreated", ascending: false)
                 ])
+            } else {
+                // Arama çubuğunda yazılan metni içeren ve seçili kategoriye ait öğeleri yükle
+                toDoItems = selectedCategory.items.filter("title CONTAINS[cd] %@", searchText)
+            }
+        } else {
+            // Kategori seçilmemişse, tüm öğeleri yükle
+            toDoItems = realm.objects(Item.self).sorted(by: [
+                SortDescriptor(keyPath: "done", ascending: true),
+                SortDescriptor(keyPath: "dateCreated", ascending: false)
+            ])
         }
-        tableView.reloadData() //Bu satır, tabloyu güncellemek için reloadData() metodunu çağırır. Bu, yüklenen ve filtrelenen öğeleri tabloya yansıtmak için kullanılır. Eğer bu satır olmasaydı, kullanıcı güncellenmiş öğeleri göremezdi.
+        tableView.reloadData()
     }
     
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        filterItemsForSearchText(searchText)
+    }
+
     func searchBarCancelButtonClicked(_ searchBar: UISearchBar) { //Bu fonksiyon, kullanıcı arama çubuğundaki iptal düğmesine tıkladığında çağrılır. İptal düğmesine tıklandığında, tüm öğeleri yükleyip göstermek ve klavyeyi kapatmak gibi işlemleri gerçekleştirir.
         // İptal düğmesine basıldığında, tüm öğeleri göster
         loadItems() //Bu, tüm öğeleri yükleyip gösteren bir fonksiyondur. İptal düğmesine basıldığında, bu fonksiyon çağrılarak tüm öğelerin gösterilmesi sağlanır.
