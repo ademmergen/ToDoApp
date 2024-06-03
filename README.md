@@ -1,7 +1,7 @@
 ## Application Video
 ![ScreenRecording2024-05-30at19 40 45-ezgif com-crop](https://github.com/ademmergen/ToDoApp/assets/159759443/afd47a74-ae13-4018-b98c-d2abdda879a0)
 
-ToDoApp is a mobile application for managing tasks categorized into different categories. This application allows users to organize, add, and delete tasks. Additionally, tasks can be marked with an animation and quickly edited.
+ToDoApp is a mobile application for managing tasks categorized into different categories. This application uses the Realm database to allow users to organize, add, and delete tasks. Additionally, tasks can be marked with an animation and quickly edited.
 
 ## Features
 
